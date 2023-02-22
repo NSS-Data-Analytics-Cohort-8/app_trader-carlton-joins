@@ -18,13 +18,86 @@
 -- f. Verify that you have two tables:  
 --     - `app_store_apps` with 7197 rows  
 --     - `play_store_apps` with 10840 rows
+-- Combined 18037
+-- 553 overlapping
+-- Should be 17484 distinct
 
 -- #### 2. Assumptions
 
 -- Based on research completed prior to launching App Trader as a company, you can assume the following:
 
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
-    
+
+-- consider using bytes as a key!
+-- Found some duplicates -- including WWE
+
+WITH price_cte AS (SELECT name, price
+FROM app_store_apps
+UNION ALL
+SELECT name, price 
+FROM (SELECT name,
+	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+	ELSE CAST(price as float) END as price
+	FROM play_store_apps) as sub)
+	
+-- Now to identify all duplicates and find highest app price
+
+SELECT p.name, a.name, p.price, a.price, GREATEST(p.price, a.price) as max_price
+FROM (SELECT name,
+	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+	ELSE CAST(price as float) END as price
+	FROM play_store_apps) as p
+FULL JOIN app_store_apps as a
+ON a.name=p.name
+ORDER BY max_price DESC;
+
+-- Added in coalesce to get rid of null values in names from app store exclusives 
+
+SELECT COALESCE(p.name,a.name), GREATEST(p.price, a.price) as max_price,
+	CASE WHEN GREATEST(p.price, a.price) > 1 THEN (10000 * GREATEST(p.price, a.price))
+	ELSE 10000 END as cost
+FROM (SELECT name,
+	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+	ELSE CAST(price as float) END as price
+	FROM play_store_apps) as p
+FULL JOIN app_store_apps as a
+ON a.name=p.name
+ORDER BY max_price DESC; -- returns 17709 rows
+
+
+SELECT DISTINCT(COALESCE(p.name,a.name)), GREATEST(p.price, a.price) as max_price,
+	CASE WHEN GREATEST(p.price, a.price) > 1 THEN (10000 * GREATEST(p.price, a.price))
+	ELSE 10000 END as cost
+FROM (SELECT name,
+	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+	ELSE CAST(price as float) END as price
+	FROM play_store_apps) as p
+FULL JOIN app_store_apps as a
+ON a.name=p.name
+ORDER BY max_price DESC; --returns 16528 rows
+
+
+-- 18037 combined rows. 18037 minus 553 is 17484
+-- Are there any apps in app store but not play store? 6869
+-- In play store but not app store? 10287 (added equals 17156)
+-- There are 553 that overlap
+-- 17709 total entries. Why does this not equal the value up top? Difference is 225
+-- Should use FULL JOIN
+
+SELECT name
+FROM play_store_apps
+WHERE name NOT IN (SELECT name
+				  FROM app_store_apps)
+SELECT name
+FROM app_store_apps
+WHERE name NOT IN (SELECT name
+				  FROM play_store_apps)	
+				  
+SELECT name
+FROM play_store_apps
+WHERE name IN (SELECT name
+				  FROM app_store_apps)
+
 -- - For example, an app that costs $2.00 will be purchased for $20,000.
     
 -- - The cost of an app is not affected by how many app stores it is on. A $1.00 app on the Apple app store will cost the same as a $1.00 app on both stores. 
@@ -32,12 +105,87 @@
 -- - If an app is on both stores, it's purchase price will be calculated based off of the highest app price between the two stores. 
 
 -- b. Apps earn $5000 per month, per app store it is on, from in-app advertising and in-app purchases, regardless of the price of the app.
-    
+
+WITH stores AS (SELECT DISTINCT(name)
+FROM app_store_apps
+UNION ALL
+SELECT DISTINCT(name)
+FROM play_store_apps)
+
+SELECT name, COUNT(name) * 5000 as monthly_earnings
+FROM stores
+GROUP BY name
+ORDER BY monthly_earnings DESC -- returns 16526 rows
+
+-- or
+
+SELECT COALESCE(p.name,a.name) as name, (COUNT(DISTINCT(p.name))+COUNT(DISTINCT(a.name))) * 5000 as monthly_earnings
+FROM play_store_apps as p
+FULL JOIN app_store_apps as a
+ON a.name = p.name
+GROUP BY p.name, a.name
+ORDER BY monthly_earnings DESC; -- returns 16526 rows
+
+
+-- WITH stores AS (SELECT name
+-- FROM app_store_apps
+-- UNION ALL
+-- SELECT name
+-- FROM play_store_apps)
+
+-- --18037 rows
+
+-- SELECT name
+-- FROM stores
+-- EXCEPT 
+-- SELECT name 
+-- FROM app_store_apps
+
+-- -- 9331 rows
+
+-- WITH stores AS (SELECT name
+-- FROM app_store_apps
+-- UNION ALL
+-- SELECT name
+-- FROM play_store_apps)
+
+-- SELECT name
+-- FROM stores
+-- EXCEPT 
+-- SELECT name 
+-- FROM play_store_apps
+
+-- --6867 rows 
+
+-- SELECT name
+-- FROM play_store_apps
+-- EXCEPT
+-- SELECT name
+-- FROM app_store_apps -- 9931
+
+-- SELECT name
+-- FROM app_store_apps
+-- EXCEPT
+-- SELECT name
+-- FROM play_store_apps -- 6867
+
+-- SELECT name
+-- FROM play_store_apps
+-- UNION
+-- SELECT name
+-- FROM app_store_apps -- 16526 shared
+
 -- - An app that costs $200,000 will make the same per month as an app that costs $1.00. 
 
 -- - An app that is on both app stores will make $10,000 per month. 
 
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
+
+SELECT COALESCE(p.name,a.name) as name, 1000 as monthly_cost
+FROM play_store_apps as p
+FULL JOIN app_store_apps as a
+ON p.name = a.name
+WHERE p.name LIKE 'FreeCell' or a.name LIKE 'FreeCell'
     
 -- - An app that costs $200,000 and an app that costs $1.00 will both cost $1000 a month for marketing, regardless of the number of stores it is in.
 
@@ -58,3 +206,4 @@
 
 -- updated 2/18/2023
 
+-- First figure out purchase prices for each app
