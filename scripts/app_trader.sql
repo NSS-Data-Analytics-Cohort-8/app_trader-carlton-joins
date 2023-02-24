@@ -64,8 +64,10 @@ FULL JOIN app_store_apps as a
 ON a.name=p.name
 ORDER BY max_price DESC; -- returns 17709 rows
 
+-- Use distinct unless you can clean it up upstream of this 
 
-SELECT DISTINCT(COALESCE(p.name,a.name)), GREATEST(p.price, a.price) as max_price,
+SELECT DISTINCT(COALESCE(p.name,a.name)), 
+	GREATEST(p.price, a.price) as max_price,
 	CASE WHEN GREATEST(p.price, a.price) > 1 THEN (10000 * GREATEST(p.price, a.price))
 	ELSE 10000 END as cost
 FROM (SELECT name,
@@ -73,7 +75,7 @@ FROM (SELECT name,
 	ELSE CAST(price as float) END as price
 	FROM play_store_apps) as p
 FULL JOIN app_store_apps as a
-ON a.name=p.name
+	ON a.name=p.name
 ORDER BY max_price DESC; --returns 16528 rows
 
 
@@ -84,19 +86,19 @@ ORDER BY max_price DESC; --returns 16528 rows
 -- 17709 total entries. Why does this not equal the value up top? Difference is 225
 -- Should use FULL JOIN
 
-SELECT name
-FROM play_store_apps
-WHERE name NOT IN (SELECT name
-				  FROM app_store_apps)
-SELECT name
-FROM app_store_apps
-WHERE name NOT IN (SELECT name
-				  FROM play_store_apps)	
+-- SELECT name
+-- FROM play_store_apps
+-- WHERE name NOT IN (SELECT name
+-- 				  FROM app_store_apps)
+-- SELECT name
+-- FROM app_store_apps
+-- WHERE name NOT IN (SELECT name
+-- 				  FROM play_store_apps)	
 				  
-SELECT name
-FROM play_store_apps
-WHERE name IN (SELECT name
-				  FROM app_store_apps)
+-- SELECT name
+-- FROM play_store_apps
+-- WHERE name IN (SELECT name
+-- 				  FROM app_store_apps)
 
 -- - For example, an app that costs $2.00 will be purchased for $20,000.
     
@@ -106,7 +108,7 @@ WHERE name IN (SELECT name
 
 -- b. Apps earn $5000 per month, per app store it is on, from in-app advertising and in-app purchases, regardless of the price of the app.
 
-WITH stores AS (SELECT DISTINCT(name)
+WITH stores AS (SELECT DISTINCT(name) as name
 FROM app_store_apps
 UNION ALL
 SELECT DISTINCT(name)
@@ -181,29 +183,177 @@ ORDER BY monthly_earnings DESC; -- returns 16526 rows
 
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
 
-SELECT COALESCE(p.name,a.name) as name, 1000 as monthly_cost
+
+SELECT DISTINCT(COALESCE(p.name,a.name)) as name, 1000 as monthly_cost
 FROM play_store_apps as p
 FULL JOIN app_store_apps as a
 ON p.name = a.name
-WHERE p.name LIKE 'FreeCell' or a.name LIKE 'FreeCell'
-    
+
+
+
 -- - An app that costs $200,000 and an app that costs $1.00 will both cost $1000 a month for marketing, regardless of the number of stores it is in.
 
 -- d. For every half point that an app gains in rating, its projected lifespan increases by one year. In other words, an app with a rating of 0 can be expected to be in use for 1 year, an app with a rating of 1.0 can be expected to last 3 years, and an app with a rating of 4.0 can be expected to last 9 years.
+
+SELECT DISTINCT(COALESCE(p.name,a.name)) as name,
+COALESCE(ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1),0) as avg_rating,
+ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1)),0)),0) as lifespan
+FROM play_store_apps as p
+FULL JOIN app_store_apps as a
+	ON a.name = p.name 
+GROUP BY p.name, a.name, p.rating, a.rating;
+
     
+-- Keep in mind, still have to figure out how to avg the ratings for the duplicate names	
+-- SELECT DISTINCT(COALESCE(p.name,a.name)) as name, p.rating, a.rating
+-- FROM play_store_apps as p
+-- FULL JOIN app_store_apps as a
+-- 	ON a.name = p.name
+-- WHERE p.rating IS NULL and a.rating IS NULL
+    	
+-- SELECT name, rating
+-- FROM play_store_apps
+-- ORDER BY 1
+
+-- SELECT rating FROM play_store_apps
+-- ORDER BY 1 DESC
+
+-- SELECT name, rating
+-- FROM app_store_apps
+-- WHERE rating is null
+	
 -- - App store ratings should be calculated by taking the average of the scores from both app stores and rounding to the nearest 0.5.
 
 -- e. App Trader would prefer to work with apps that are available in both the App Store and the Play Store since they can market both for the same $1000 per month.
 
+SELECT DISTINCT(COALESCE(p.name,a.name)) as name
+FROM play_store_apps as p
+FULL JOIN app_store_apps as a
+ON p.name = a.name
+WHERE DISTINCT(COALESCE(p.name,a.name)) IN 
+			(SELECT DISTINCT(COALESCE(p.name,a.name)) as name
+			  FROM play_store_apps as p
+			  INNER JOIN app_store_apps as a
+			  ON p.name = a.name)
+			  
+SELECT DISTINCT(COALESCE(p.name,a.name))
+FROM play_store_apps as p
+INNER JOIN app_store_apps as a
+USING (name)
 
 -- #### 3. Deliverables
 
 -- a. Develop some general recommendations as to the price range, genre, content rating, or anything else for apps that the company should target.
 
+-- Minimize Purchase cost
+-- Maximize Ratings
+-- Preference for apps in both stores
+
+
+-- Best genres (needs work)
+SELECT LEFT(COALESCE(p.genres,a.primary_genre), POSITION(';' in COALESCE(p.genres,a.primary_genre)) -1) as genre,
+	ROUND(AVG(COALESCE(ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1),0)),1) as genre_rating
+FROM play_store_apps as p
+FULL JOIN app_store_apps as a
+	ON a.name = p.name 
+GROUP BY COALESCE(p.genres,a.primary_genre)
+ORDER BY AVG(COALESCE(ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1),0)) DESC
+LIMIT 25;
+
+--Best Price Range
+-- SELECT CASE WHEN GREATEST(p.price, a.price) = 0 THEN 'Free'
+-- 			WHEN GREATEST(p.price, a.price) <1 THEN 'Under $1'
+-- 			WHEN GREATEST(p.price, a.price) <2 THEN '$1 - $2'
+-- 			WHEN GREATEST(p.price, a.price) <3 THEN '$2 - $3'
+-- 			WHEN GREATEST(p.price, a.price) <4 THEN '$3 - $4'
+-- 			WHEN GREATEST(p.price, a.price) <5 THEN '$4 - $5'
+-- 			WHEN GREATEST(p.price, a.price) <10 THEN '$5 - $10'
+-- 			WHEN GREATEST(p.price, a.price) <20 THEN '$10 - $20'
+-- 			WHEN GREATEST(p.price, a.price) <50 THEN '$20 - $50'
+-- 			WHEN GREATEST(p.price, a.price) <100 THEN '$50 - $100'
+-- 			WHEN GREATEST(p.price, a.price) <200 THEN '$100 - $200'
+-- 			ELSE 'Over $200' END as price_range, 
+-- 		COUNT(CASE WHEN GREATEST(p.price, a.price) = 0 THEN 'Free'
+-- 			WHEN GREATEST(p.price, a.price) <1 THEN 'Under $1'
+-- 			WHEN GREATEST(p.price, a.price) <2 THEN '$1 - $2'
+-- 			WHEN GREATEST(p.price, a.price) <3 THEN '$2 - $3'
+-- 			WHEN GREATEST(p.price, a.price) <4 THEN '$3 - $4'
+-- 			WHEN GREATEST(p.price, a.price) <5 THEN '$4 - $5'
+-- 			WHEN GREATEST(p.price, a.price) <10 THEN '$5 - $10'
+-- 			WHEN GREATEST(p.price, a.price) <20 THEN '$10 - $20'
+-- 			WHEN GREATEST(p.price, a.price) <50 THEN '$20 - $50'
+-- 			WHEN GREATEST(p.price, a.price) <100 THEN '$50 - $100'
+-- 			WHEN GREATEST(p.price, a.price) <200 THEN '$100 - $200'
+-- 			ELSE 'Over $200' END) as price_count
+-- FROM (SELECT name, rating,
+-- 	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+-- 	ELSE CAST(price as float) END as price
+-- 	FROM play_store_apps) as p
+-- FULL JOIN app_store_apps as a
+-- 	ON a.name=p.name
+-- GROUP BY price_range
+-- ORDER BY price_count DESC
+
+-- attempting to use a window function to get profits by price range. this is a mess. fix tomorrow 
+
+WITH ranges AS (SELECT CASE WHEN GREATEST(p.price, a.price) = 0 THEN 'Free'
+			WHEN GREATEST(p.price, a.price) <1 THEN 'Under $1'
+			WHEN GREATEST(p.price, a.price) <2 THEN '$1 - $2'
+			WHEN GREATEST(p.price, a.price) <3 THEN '$2 - $3'
+			WHEN GREATEST(p.price, a.price) <4 THEN '$3 - $4'
+			WHEN GREATEST(p.price, a.price) <5 THEN '$4 - $5'
+			WHEN GREATEST(p.price, a.price) <10 THEN '$5 - $10'
+			WHEN GREATEST(p.price, a.price) <20 THEN '$10 - $20'
+			WHEN GREATEST(p.price, a.price) <50 THEN '$20 - $50'
+			WHEN GREATEST(p.price, a.price) <100 THEN '$50 - $100'
+			WHEN GREATEST(p.price, a.price) <200 THEN '$100 - $200'
+			ELSE 'Over $200' END as price_range
+	FROM (SELECT name, rating,
+		CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+		ELSE CAST(price as float) END as price
+		FROM play_store_apps) as p
+	FULL JOIN app_store_apps as a
+		ON a.name=p.name),
+		
+	profit AS (SELECT DISTINCT(COALESCE(p.name,a.name)) as name,((((COUNT(DISTINCT(p.name))+COUNT(DISTINCT(a.name))) * 5000)-1000)*12*ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + 													COALESCE(a.rating,p.rating)),0)/2,1)),0)),0)) - (CASE WHEN GREATEST(p.price, a.price) > 1 
+			THEN ROUND((10000 * GREATEST(p.price, a.price,0)))
+			ELSE 10000 END) as net_profit
+			 FROM (SELECT name, rating,
+	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+	ELSE CAST(price as float) END as price
+	FROM play_store_apps) as p
+FULL JOIN app_store_apps as a
+	ON a.name=p.name
+GROUP BY DISTINCT(COALESCE(p.name,a.name)), p.price,a.price,p.rating, a.rating)
+	
+SELECT ranges.price_range, COUNT(ranges.price_range), AVG(profit.net_profit) OVER (PARTITION BY price_range)
+FROM ranges
+INNER JOIN profit 
+USING (name)
+GROUP BY price_range
+		
+
+
 -- b. Develop a Top 10 List of the apps that App Trader should buy.
 
+SELECT DISTINCT(COALESCE(p.name,a.name)) as app_name, 
+	CASE WHEN GREATEST(p.price, a.price) > 1 THEN ROUND((10000 * GREATEST(p.price, a.price,0)))
+	ELSE 10000 END as purchase_price,
+	(COUNT(DISTINCT(p.name))+COUNT(DISTINCT(a.name))) * 5000 as monthly_earnings, 
+	1000 as marketing_cost,
+	ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1)),0)),0) as lifespan,
+	((((COUNT(DISTINCT(p.name))+COUNT(DISTINCT(a.name))) * 5000)-1000)*12*ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + 													COALESCE(a.rating,p.rating)),0)/2,1)),0)),0)) - (CASE WHEN GREATEST(p.price, a.price) > 1 
+			THEN ROUND((10000 * GREATEST(p.price, a.price,0)))
+			ELSE 10000 END) as net_profit
+FROM (SELECT name, rating,
+	CASE WHEN price LIKE '$%' THEN CAST(SUBSTRING(price,2,length(price)) as float)
+	ELSE CAST(price as float) END as price
+	FROM play_store_apps) as p
+FULL JOIN app_store_apps as a
+	ON a.name=p.name
+GROUP BY DISTINCT(COALESCE(p.name,a.name)), p.price,a.price,p.rating, a.rating
+ORDER BY net_profit DESC;
 
+-- consider reorganizing as cte 
 
 -- updated 2/18/2023
-
--- First figure out purchase prices for each app
