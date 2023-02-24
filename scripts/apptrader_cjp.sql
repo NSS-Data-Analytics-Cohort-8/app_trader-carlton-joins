@@ -11,6 +11,18 @@ FROM play_store_apps;
 -- Based on research completed prior to launching App Trader as a company, you can assume the following:
 
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
+
+--remove dollar sign
+--SELECT name, CAST(REPLACE(price, '$',' ') AS float),
+--FROM play_store_apps;
+
+
+SELECT d.name AS dname, i.name AS iname, d.rating AS drating, i.rating AS irating, size AS dsize, size_bytes AS isize, primary_genre, genres, i.price, CAST(REPLACE(d.price, '$',' ') AS float)
+FROM play_store_apps AS d
+INNER JOIN app_store_apps AS i
+ON d.name = i.name
+WHERE i.name IS NOT NULL AND GREATEST();
+
     
 -- - For example, an app that costs $2.00 will be purchased for $20,000.
     
@@ -58,7 +70,7 @@ ORDER BY rating DESC;
 --CREATE VIEW all_ratings AS
 SELECT d.name AS dname, i.name AS iname, d.rating AS drating, i.rating AS irating, size AS dsize, size_bytes AS isize, primary_genre, genres
 FROM play_store_apps AS d
-LEFT JOIN app_store_apps AS i
+INNER JOIN app_store_apps AS i
 ON d.name = i.name
 WHERE i.name IS NOT NULL;
 
