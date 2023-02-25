@@ -60,7 +60,6 @@ FROM play_store_apps;
     LEFT JOIN play_store_apps as p
 	ON a.name =p.name;
 	
-	
 -- - An app that costs $200,000 will make the same per month as an app that costs $1.00. 
 
 -- - An app that is on both app stores will make $10,000 per month. 
@@ -68,14 +67,15 @@ FROM play_store_apps;
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
     
 	 SELECT p.name,
- 	CAST(p.price AS INT) AS price,
+ 	CAST(REPLACE(p.price,'$','') AS FLOAT) AS price,
  	a.name,
  	a.price,
-	CASE WHEN a.price >=0 AND CAST(p.price AS INT) AS p.price >=0  THEN '1000'
+	CASE WHEN a.price >=0 AND CAST(p.price AS FLOAT) >=0  THEN '1000'
 	ELSE '0' END AS marketing
  FROM app_store_apps as a
     LEFT JOIN play_store_apps as p
 	ON a.name =p.name;
+	
 	
 -- - An app that costs $200,000 and an app that costs $1.00 will both cost $1000 a month for marketing, regardless of the number of stores it is in.
 
@@ -85,23 +85,26 @@ SELECT a.name,
 	   a.rating,
 	   p.name,
 	   p.rating,
-	   CASE WHEN a.rating = 0 THEN '1 Year'
-	   		WHEN a.rating = 1 THEN '3 Years'
-			WHEN a.rating = 4 THEN '9 Years'
-			ELSE 'O Years' END AS projected_lifespan_app,
-	   CASE WHEN p.rating = 0 THEN '1 Year'
-	   		WHEN p.rating = 1 THEN '3 Years'
-			WHEN p.rating = 4 THEN '9 Years'
-			ELSE 'O Years' END AS projected_lifespan_play 		
+	   CASE WHEN ROUND(((a.rating + p.rating)/2),1) = 0.0 THEN '1 Year'
+	   		WHEN ROUND((a.rating + p.rating)/2,1) = 1.0 THEN '3 Years'
+			WHEN ROUND((a.rating + p.rating)/2,1) = 4.0 THEN '9 Years'
+			ELSE 'O Years' END AS projected_lifespan	
 FROM app_store_apps AS a
 JOIN play_store_apps AS p
 ON a.name = p.name;
 
-	
 
 -- - App store ratings should be calculated by taking the average of the scores from both app stores and rounding to the nearest 0.5.
 
 -- e. App Trader would prefer to work with apps that are available in both the App Store and the Play Store since they can market both for the same $1000 per month.
+
+SELECT a.name
+FROM app_store_apps AS a
+UNION
+WHERE a.name = p.name;
+SELECT p.name
+FROM play_store_apps AS p
+
 
 
 -- #### 3. Deliverables
