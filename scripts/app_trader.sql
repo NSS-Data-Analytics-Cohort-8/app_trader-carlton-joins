@@ -193,8 +193,8 @@ ON p.name = a.name
 -- d. For every half point that an app gains in rating, its projected lifespan increases by one year. In other words, an app with a rating of 0 can be expected to be in use for 1 year, an app with a rating of 1.0 can be expected to last 3 years, and an app with a rating of 4.0 can be expected to last 9 years.
 
 SELECT DISTINCT(COALESCE(p.name,a.name)) as name,
-COALESCE(ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1),0) as avg_rating,
-ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1)),0)),0) as lifespan
+	COALESCE(ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1),0) as avg_rating,
+	ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1)),0)),0) as lifespan
 FROM play_store_apps as p
 FULL JOIN app_store_apps as a
 	ON a.name = p.name 
@@ -254,16 +254,16 @@ GROUP BY DISTINCT(COALESCE(p.name,a.name)), p.price,a.price,p.rating, a.rating,g
 SELECT genre, COUNT(*),
 	 ROUND(AVG(net_profit::numeric),0) as avg_genre_profit
 FROM profit as p
-FULL JOIN app_store_apps as a
-	ON a.name = p.name 
 GROUP BY genre
 ORDER BY AVG(net_profit) DESC
 LIMIT 25;
 
+SELECT 
+
 --Best Price Range (try to figure out how to do with a window function too)
 --Advised to target apps under $10
 		
-WITH profit AS (SELECT DISTINCT(COALESCE(p.name,a.name)) as name,((((COUNT(DISTINCT(p.name))+COUNT(DISTINCT(a.name))) * 5000)-1000)*12*ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + 													COALESCE(a.rating,p.rating)),0)/2,1)),0)),0)) - (CASE WHEN GREATEST(p.price, a.price) > 1 
+WITH profit AS (SELECT DISTINCT(COALESCE(p.name,a.name)) as name,((((COUNT(DISTINCT(p.name))+COUNT(DISTINCT(a.name))) * 5000)-1000)*12*ROUND((1+COALESCE((2*ROUND(ROUND((COALESCE(p.rating,a.rating) + COALESCE(a.rating,p.rating)),0)/2,1)),0)),0)) - (CASE WHEN GREATEST(p.price, a.price) > 1 
 			THEN ROUND((10000 * GREATEST(p.price, a.price,0)))
 			ELSE 10000 END) as net_profit, GREATEST(p.price, a.price) as price
 			 FROM (SELECT name, rating,
