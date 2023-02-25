@@ -16,12 +16,12 @@ FROM play_store_apps;
 --SELECT name, CAST(REPLACE(price, '$',' ') AS float),
 --FROM play_store_apps;
 
-
-SELECT d.name AS dname, i.name AS iname, d.rating AS drating, i.rating AS irating, size AS dsize, size_bytes AS isize, primary_genre, genres, i.price, CAST(REPLACE(d.price, '$',' ') AS float)
+--selecting NAME,RATING,SIZE,GENRE and GREATEST PRICE of the apps that are only in both stores
+SELECT d.name AS dname, i.name AS iname, d.rating AS drating, i.rating AS irating, size AS dsize, size_bytes AS isize, primary_genre, genres, GREATEST(i.price, CAST(REPLACE(d.price, '$','') AS float))
 FROM play_store_apps AS d
 INNER JOIN app_store_apps AS i
-ON d.name = i.name
-WHERE i.name IS NOT NULL AND GREATEST();
+ON d.name = i.name;
+--WHERE d.name, i.name GREATEST(i.price, d.price);
 
     
 -- - For example, an app that costs $2.00 will be purchased for $20,000.
