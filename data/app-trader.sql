@@ -28,17 +28,17 @@
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
 
 
--- SELECT name, 
--- 	   CAST(price AS integer),
--- CASE WHEN price >0 THEN ROUND(price * 10000,-2)
--- ELSE price END AS purchase_price
--- FROM app_store_apps
--- UNION ALL
--- SELECT name, 
--- 	   CAST(price AS INT),
---        CASE WHEN price > 0 THEN price * 10000
--- ELSE price END AS purchase_price
--- FROM play_store_apps;
+SELECT name, 
+	   CAST(price AS integer),
+CASE WHEN price >0 THEN ROUND(price * 10000,-2)
+ELSE price END AS purchase_price
+FROM app_store_apps
+UNION ALL
+SELECT name, 
+	   CAST(price AS INT),
+       CASE WHEN price > 0 THEN price * 10000
+ELSE price END AS purchase_price
+FROM play_store_apps;
 
 -- - For example, an app that costs $2.00 will be purchased for $20,000.
     
@@ -50,15 +50,15 @@
 
 -- b. Apps earn $5000 per month, per app store it is on, from in-app advertising and in-app purchases, regardless of the price of the app.
 
---  SELECT p.name,
---  	p.price,
---  	a.name,
---  	a.price,
--- 	CASE WHEN a.name = p.name THEN '10000'
--- 	ELSE '5000' END AS app_earnings
---  FROM app_store_apps as a
---     LEFT JOIN play_store_apps as p
--- 	ON a.name =p.name;
+ SELECT p.name,
+ 	p.price,
+ 	a.name,
+ 	a.price,
+	CASE WHEN a.name = p.name THEN '10000'
+	ELSE '5000' END AS app_earnings
+ FROM app_store_apps as a
+    LEFT JOIN play_store_apps as p
+	ON a.name =p.name;
 	
 	
 -- - An app that costs $200,000 will make the same per month as an app that costs $1.00. 
@@ -67,15 +67,15 @@
 
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
     
--- 	 SELECT p.name,
---  	CAST(p.price AS INT) AS price,
---  	a.name,
---  	a.price,
--- 	CASE WHEN a.price >=0 AND CAST(p.price AS INT) AS p.price >=0  THEN '1000'
--- 	ELSE '0' END AS marketing
---  FROM app_store_apps as a
---     LEFT JOIN play_store_apps as p
--- 	ON a.name =p.name;
+	 SELECT p.name,
+ 	CAST(p.price AS INT) AS price,
+ 	a.name,
+ 	a.price,
+	CASE WHEN a.price >=0 AND CAST(p.price AS INT) AS p.price >=0  THEN '1000'
+	ELSE '0' END AS marketing
+ FROM app_store_apps as a
+    LEFT JOIN play_store_apps as p
+	ON a.name =p.name;
 	
 -- - An app that costs $200,000 and an app that costs $1.00 will both cost $1000 a month for marketing, regardless of the number of stores it is in.
 
