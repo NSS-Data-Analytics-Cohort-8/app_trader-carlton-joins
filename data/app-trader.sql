@@ -21,24 +21,24 @@
 
 
 -- #### 2. Assumptions
-SELECT *
-FROM app_store_apps
+
+
 -- Based on research completed prior to launching App Trader as a company, you can assume the following:
 
 -- a. App Trader will purchase apps for 10,000 times the price of the app. For apps that are priced from free up to $1.00, the purchase price is $10,000.
 
 
-SELECT name, 
-	   CAST(price AS integer),
-CASE WHEN price >0 THEN ROUND(price * 10000,-2)
-ELSE price END AS purchase_price
-FROM app_store_apps
-UNION ALL
-SELECT name, 
-	   CAST(price AS INT),
-       CASE WHEN price > 0 THEN price * 10000
-ELSE price END AS purchase_price
-FROM play_store_apps;
+-- SELECT name, 
+-- 	   CAST(price AS integer),
+-- CASE WHEN price >0 THEN ROUND(price * 10000,-2)
+-- ELSE price END AS purchase_price
+-- FROM app_store_apps
+-- UNION ALL
+-- SELECT name, 
+-- 	   CAST(price AS INT),
+--        CASE WHEN price > 0 THEN price * 10000
+-- ELSE price END AS purchase_price
+-- FROM play_store_apps;
 
 -- - For example, an app that costs $2.00 will be purchased for $20,000.
     
@@ -50,15 +50,15 @@ FROM play_store_apps;
 
 -- b. Apps earn $5000 per month, per app store it is on, from in-app advertising and in-app purchases, regardless of the price of the app.
 
- SELECT p.name,
- 	p.price,
- 	a.name,
- 	a.price,
-	CASE WHEN a.name = p.name THEN '10000'
-	ELSE '5000' END AS app_earnings
- FROM app_store_apps as a
-    LEFT JOIN play_store_apps as p
-	ON a.name =p.name;
+--  SELECT p.name,
+--  	p.price,
+--  	a.name,
+--  	a.price,
+-- 	CASE WHEN a.name = p.name THEN '10000'
+-- 	ELSE '5000' END AS app_earnings
+--  FROM app_store_apps as a
+--     LEFT JOIN play_store_apps as p
+-- 	ON a.name =p.name;
 	
 	
 -- - An app that costs $200,000 will make the same per month as an app that costs $1.00. 
@@ -67,28 +67,38 @@ FROM play_store_apps;
 
 -- c. App Trader will spend an average of $1000 per month to market an app regardless of the price of the app. If App Trader owns rights to the app in both stores, it can market the app for both stores for a single cost of $1000 per month.
     
-	 SELECT p.name,
- 	CAST(p.price AS INT) AS price,
- 	a.name,
- 	a.price,
-	CASE WHEN a.price >=0 AND CAST(p.price AS INT) AS p.price >=0  THEN '1000'
-	ELSE '0' END AS marketing
- FROM app_store_apps as a
-    LEFT JOIN play_store_apps as p
-	ON a.name =p.name;
-	
+-- 	 SELECT p.name,
+--  	CAST(p.price AS INT) AS price,
+--  	a.name,
+--  	a.price,
+-- 	CASE WHEN a.price >=0 AND CAST(p.price AS INT) AS p.price >=0  THEN '1000'
+-- 	ELSE '0' END AS marketing
+--  FROM app_store_apps as a
+--     LEFT JOIN play_store_apps as p
+-- 	ON a.name =p.name;
 	
 -- - An app that costs $200,000 and an app that costs $1.00 will both cost $1000 a month for marketing, regardless of the number of stores it is in.
 
 -- d. For every half point that an app gains in rating, its projected lifespan increases by one year. In other words, an app with a rating of 0 can be expected to be in use for 1 year, an app with a rating of 1.0 can be expected to last 3 years, and an app with a rating of 4.0 can be expected to last 9 years.
 
-SELECT 
-CASE WHEN
+SELECT a.name, 
+	   a.rating,
+	   p.name,
+	   p.rating,
+	   CASE WHEN a.rating = 0 THEN '1 Year'
+	   		WHEN a.rating = 1 THEN '3 Years'
+			WHEN a.rating = 4 THEN '9 Years'
+			ELSE 'O Years' END AS projected_lifespan_app,
+	   CASE WHEN p.rating = 0 THEN '1 Year'
+	   		WHEN p.rating = 1 THEN '3 Years'
+			WHEN p.rating = 4 THEN '9 Years'
+			ELSE 'O Years' END AS projected_lifespan_play 		
+FROM app_store_apps AS a
+JOIN play_store_apps AS p
+ON a.name = p.name;
 
-FROM 
+	
 
-
-    
 -- - App store ratings should be calculated by taking the average of the scores from both app stores and rounding to the nearest 0.5.
 
 -- e. App Trader would prefer to work with apps that are available in both the App Store and the Play Store since they can market both for the same $1000 per month.
